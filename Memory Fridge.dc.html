@@ -28,6 +28,12 @@
     <text x="0" y="15" font-family="Schoolbell, cursive" font-size="14" fill="rgba(74,50,38,0.55)">created by martalu :)</text>
   </svg>
 
+  <sc-if value="{{ saveError }}">
+    <div role="alert" style="position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:90; width:min(92vw, 440px); background:#fdfbf6; color:#4a3226; border-radius:14px; padding:12px 40px 12px 16px; box-shadow:0 12px 28px rgba(74,50,38,0.25); font-size:14px; line-height:1.4; border-left:4px solid #c96a4a;">
+      {{ saveError }}
+      <button onClick="{{ dismissSaveError }}" aria-label="Dismiss" style="position:absolute; top:8px; right:10px; border:none; background:none; font-size:18px; color:rgba(74,50,38,0.6); cursor:pointer;">×</button>
+    </div>
+  </sc-if>
   <sc-if value="{{ settingsOpen }}">
     <div onClick="{{ toggleSettings }}" style="position:fixed; inset:0; z-index:65;"></div>
   </sc-if>
@@ -417,6 +423,47 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   static BLANK_PX = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7';
+
+  // Photos, videos and uploaded magnets live in IndexedDB (much more room than
+  // localStorage's ~5 MB). Memories keep only a reference like "idb:<id>".
+  static MEDIA_PREFIX = 'idb:';
+  static openMediaDb() {
+    if (!Component._dbPromise) {
+      Component._dbPromise = new Promise((resolve, reject) => {
+        const req = indexedDB.open('memory-fridge-media', 1);
+        req.onupgradeneeded = () => req.result.createObjectStore('media');
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    return Component._dbPromise;
+  }
+  static async mediaTx(mode, fn) {
+    const db = await Component.openMediaDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('media', mode);
+      const result = fn(tx.objectStore('media'));
+      tx.oncomplete = () => resolve(result && 'result' in result ? result.result : undefined);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+  // Downscale photos before saving. PNGs keep transparency (uploaded magnets).
+  static async shrinkImage(file, maxSide) {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+      const blob = await new Promise(r => canvas.toBlob(r, type, 0.82));
+      return blob && blob.size < file.size ? blob : file;
+    } catch (e) {
+      return file;
+    }
+  }
   static FRIDGE_COLORS = [
     { name: 'Green', swatch: '#a9c17c', img: 'assets/fridge-crayon3.png' },
     { name: 'Blue', swatch: '#a9c9e6', img: 'assets/fridge-color-blue2.png' },
@@ -487,6 +534,10 @@ class Component extends DCLogic {
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem('memory-fridge-magnets-v1') || 'null'); } catch (e) {}
     if (saved && saved.length) saved = saved.filter(m => !(m.data && /starfish|france/.test(m.data.imageUrl || '')) && m.kind !== 'shape');
+    // Older versions saved videos as blob: URLs, which stop working after a reload.
+    if (saved && saved.length) saved = saved.map(m => (m.memory && m.memory.videos)
+      ? { ...m, memory: { ...m.memory, videos: m.memory.videos.filter(u => !String(u).startsWith('blob:')) } }
+      : m);
 
     let fridgeColorIdx = 0;
     try { fridgeColorIdx = parseInt(localStorage.getItem('memory-fridge-color-idx') || '0', 10) || 0; } catch (e) {}
@@ -509,6 +560,8 @@ class Component extends DCLogic {
       audioOn,
       onboardingOpen: false,
       catIdx,
+      mediaUrls: {},
+      saveError: null,
     };
     this._dragMeta = null;
     this._audioEl = null;
@@ -566,7 +619,59 @@ class Component extends DCLogic {
   }
 
   persist(magnets) {
-    try { localStorage.setItem('memory-fridge-magnets-v1', JSON.stringify(magnets)); } catch (e) {}
+    try {
+      localStorage.setItem('memory-fridge-magnets-v1', JSON.stringify(magnets));
+      if (this.state.saveError) this.setState({ saveError: null });
+    } catch (e) {
+      this.setState({ saveError: 'Your fridge could not be saved in this browser, so recent changes will be lost on reload. Try removing a few photos.' });
+    }
+  }
+
+  // Saves a file in IndexedDB and returns its reference, or null on failure.
+  async storeMedia(blob) {
+    const ref = Component.MEDIA_PREFIX + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    try {
+      await Component.mediaTx('readwrite', store => store.put(blob, ref));
+    } catch (e) {
+      this.setState({ saveError: 'This file could not be saved in this browser (it may be out of space). Try a smaller file.' });
+      return null;
+    }
+    this.setState(s => ({ mediaUrls: { ...s.mediaUrls, [ref]: URL.createObjectURL(blob) } }));
+    return ref;
+  }
+
+  // Turns a saved reference into something an <img>/<video> can show.
+  mediaUrl(ref) {
+    if (!ref || !String(ref).startsWith(Component.MEDIA_PREFIX)) return ref;
+    return this.state.mediaUrls[ref] || Component.BLANK_PX;
+  }
+
+  // On start: load every stored file, and delete files no memory uses any more.
+  async loadMedia() {
+    const used = new Set();
+    this.state.magnets.forEach(m => {
+      if (m.data && m.data.imageUrl) used.add(m.data.imageUrl);
+      if (m.memory) [...(m.memory.photos || []), ...(m.memory.videos || [])].forEach(u => used.add(u));
+    });
+    try {
+      const entries = await Component.mediaTx('readonly', store => {
+        const out = [];
+        store.openCursor().onsuccess = (e) => {
+          const cur = e.target.result;
+          if (cur) { out.push([cur.key, cur.value]); cur.continue(); }
+        };
+        return { get result() { return out; } };
+      });
+      const urls = {};
+      const unused = [];
+      entries.forEach(([key, blob]) => {
+        if (used.has(key)) urls[key] = URL.createObjectURL(blob); else unused.push(key);
+      });
+      this.setState(s => ({ mediaUrls: { ...urls, ...s.mediaUrls } }));
+      if (unused.length) Component.mediaTx('readwrite', store => unused.forEach(k => store.delete(k))).catch(() => {});
+    } catch (e) {
+      // IndexedDB unavailable (e.g. some private windows): photos still work this session.
+    }
   }
 
   updateMagnets(next) {
@@ -575,6 +680,7 @@ class Component extends DCLogic {
   }
 
   componentDidMount() {
+    this.loadMedia();
     this._onMove = (e) => this.handlePointerMove(e);
     this._onUp = (e) => this.handlePointerUp(e);
     window.addEventListener('pointermove', this._onMove);
@@ -672,17 +778,11 @@ class Component extends DCLogic {
 
   addFiles(field, fileList) {
     const files = Array.from(fileList || []);
-    files.forEach(file => {
-      if (field === 'videos') {
-        const url = URL.createObjectURL(file);
-        this.setState(s => ({ draft: { ...s.draft, videos: [...s.draft.videos, url] } }));
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.setState(s => ({ draft: { ...s.draft, [field]: [...s.draft[field], reader.result] } }));
-      };
-      reader.readAsDataURL(file);
+    files.forEach(async file => {
+      const blob = field === 'photos' ? await Component.shrinkImage(file, 1600) : file;
+      const ref = await this.storeMedia(blob);
+      if (!ref) return;
+      this.setState(s => s.draft ? ({ draft: { ...s.draft, [field]: [...s.draft[field], ref] } }) : null);
     });
   }
 
@@ -722,12 +822,10 @@ class Component extends DCLogic {
   addCustomImage(fileList) {
     const file = fileList && fileList[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.addFromCatalog({ kind: 'custom', data: { imageUrl: reader.result } });
-    };
-    reader.readAsDataURL(file);
     this.setState({ galleryOpen: false });
+    Component.shrinkImage(file, 600)
+      .then(blob => this.storeMedia(blob))
+      .then(ref => { if (ref) this.addFromCatalog({ kind: 'custom', data: { imageUrl: ref } }); });
   }
 
   setFridgeColor(idx) {
@@ -774,7 +872,7 @@ class Component extends DCLogic {
       const hasMemory = !!(m.memory && (m.memory.title || m.memory.description || (m.memory.photos && m.memory.photos.length) || (m.memory.videos && m.memory.videos.length)));
       return {
         ...m, ...flags, hasMemory,
-        imageSrc: (m.data && m.data.imageUrl) ? m.data.imageUrl : 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7',
+        imageSrc: (m.data && m.data.imageUrl) ? this.mediaUrl(m.data.imageUrl) : 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7',
         wrapStyle: {
           position: 'absolute', left: m.x + '%', top: m.y + '%',
           transform: `translate(-50%, -50%) rotate(${m.rotation}deg) scale(${dragging === m.id ? 1.07 : 1})`,
@@ -820,8 +918,8 @@ class Component extends DCLogic {
     if (viewingMagnetRaw && viewingMagnetRaw.memory) {
       const mem = viewingMagnetRaw.memory;
       const items = [
-        ...(mem.photos || []).map(url => ({ type: 'photo', url })),
-        ...(mem.videos || []).map(url => ({ type: 'video', url })),
+        ...(mem.photos || []).map(url => ({ type: 'photo', url: this.mediaUrl(url) })),
+        ...(mem.videos || []).map(url => ({ type: 'video', url: this.mediaUrl(url) })),
       ];
       const total = items.length;
       const idx = total ? ((this.state.carouselIndex % total) + total) % total : 0;
@@ -871,7 +969,9 @@ class Component extends DCLogic {
       activeMagnet,
       viewingMagnet,
       magnetLabel: activeMagnet ? ((activeMagnet.data && activeMagnet.data.label) || 'This magnet') : '',
-      activeMagnetImageSrc: (activeMagnet && activeMagnet.data && activeMagnet.data.imageUrl) || null,
+      activeMagnetImageSrc: (activeMagnet && activeMagnet.data && activeMagnet.data.imageUrl) ? this.mediaUrl(activeMagnet.data.imageUrl) : null,
+      saveError: this.state.saveError,
+      dismissSaveError: () => this.setState({ saveError: null }),
       draft,
       stopProp: (e) => e.stopPropagation(),
       closeMemory: () => this.closeMemory(),
@@ -882,8 +982,8 @@ class Component extends DCLogic {
       onPhotosChange: (e) => { this.addFiles('photos', e.target.files); e.target.value = ''; },
       onVideosChange: (e) => { this.addFiles('videos', e.target.files); e.target.value = ''; },
       onCustomUpload: (e) => { this.addCustomImage(e.target.files); e.target.value = ''; },
-      photosView: draft.photos.map((url, i) => ({ url: url || Component.BLANK_PX, onRemove: () => this.removeDraftItem('photos', i) })),
-      videosView: draft.videos.map((url, i) => ({ url, hasError: !!this.state.videoErrors[i], onRemove: () => this.removeDraftItem('videos', i), onError: () => this.setState(s => ({ videoErrors: { ...s.videoErrors, [i]: true } })) })),
+      photosView: draft.photos.map((url, i) => ({ url: this.mediaUrl(url) || Component.BLANK_PX, onRemove: () => this.removeDraftItem('photos', i) })),
+      videosView: draft.videos.map((url, i) => ({ url: this.mediaUrl(url), hasError: !!this.state.videoErrors[i], onRemove: () => this.removeDraftItem('videos', i), onError: () => this.setState(s => ({ videoErrors: { ...s.videoErrors, [i]: true } })) })),
     };
   }
 }
