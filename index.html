@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Schoolbell&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: rgba(74,50,38,0.25); border-radius: 8px; }
+    a { color: #a44a3f; }
+    a:hover { color: #7a352c; }
+    @keyframes ff-pop { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes ff-slide { 0% { transform: translateX(24px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+  </style>
+</helmet>
+
+<div style="height: 100vh; width: 100%; overflow: hidden; font-family: 'DM Sans',sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 20px; background-image: url('uploads/pasted-1784892580263-0.png'); background-size: cover; background-position: center 0%; background-repeat: no-repeat;">
+
+  <svg style="position:fixed; bottom:10px; left:14px; z-index:70; pointer-events:none;" width="150" height="20" viewBox="0 0 150 20">
+    <text x="0" y="15" font-family="Schoolbell, cursive" font-size="14" fill="rgba(74,50,38,0.55)">created by martalu :)</text>
+  </svg>
+
+  <sc-if value="{{ settingsOpen }}">
+    <div onClick="{{ toggleSettings }}" style="position:fixed; inset:0; z-index:65;"></div>
+  </sc-if>
+  <div style="position:fixed; bottom:24px; right:24px; z-index:70; display:flex; flex-direction:column; align-items:flex-end; gap:12px;">
+    <sc-if value="{{ settingsOpen }}">
+      <div onClick="{{ stopProp }}" style="background:#fdfbf6; border-radius:16px; padding:16px 18px; box-shadow:0 16px 34px rgba(74,50,38,0.25); display:flex; flex-direction:column; gap:10px; animation:ff-pop 0.15s ease;">
+        <div style="font-size:17px; font-weight:400; font-family:'Schoolbell',cursive; color:#4a3226;">Fridge color</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <sc-for list="{{ fridgeColors }}" as="c" hint-placeholder-count="4">
+            <button onClick="{{ c.onSelect }}" style="{{ c.swatchStyle }}" title="{{ c.name }}"></button>
+          </sc-for>
+        </div>
+        <div style="margin-top:6px; padding-top:10px; border-top:1px solid rgba(74,50,38,0.1);">
+          <div style="font-size:17px; font-weight:400; font-family:'Schoolbell',cursive; color:#4a3226; margin-bottom:8px;">Kitchen cat</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <sc-for list="{{ catOptions }}" as="c" hint-placeholder-count="4">
+              <button onClick="{{ c.onSelect }}" style="{{ c.thumbStyle }}" title="{{ c.name }}">
+                <img src="{{ c.img }}" style="width:100%; height:100%; object-fit:contain;">
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:6px; padding-top:10px; border-top:1px solid rgba(74,50,38,0.1);">
+          <span style="font-size:17px; font-weight:400; font-family:'Schoolbell',cursive; color:#4a3226;">Ambient music</span>
+          <button onClick="{{ toggleAudio }}" style="{{ audioToggleStyle }}">
+            <span style="{{ audioKnobStyle }}"></span>
+          </button>
+        </div>
+      </div>
+    </sc-if>
+    <button onClick="{{ openGallery }}" style="width:48px; height:48px; border-radius:50%; border:none; background:#6b8f4e; color:#fffaf0; font-size:22px; font-weight:600; cursor:pointer; box-shadow:0 8px 18px rgba(107,143,78,0.45); display:flex; align-items:center; justify-content:center; line-height:1;" style-hover="background:#557540;" title="Add a magnet">+</button>
+    <button onClick="{{ openOnboarding }}" style="width:48px; height:48px; border-radius:50%; border:none; background:#f19c79; color:#fffaf0; font-size:20px; font-weight:700; cursor:pointer; box-shadow:0 6px 14px rgba(241,156,121,0.4); display:flex; align-items:center; justify-content:center;" style-hover="background:#dd7f52;" title="How this works">?</button>
+    <button onClick="{{ toggleSettings }}" style="width:48px; height:48px; border-radius:50%; border:none; background:#4a3226; color:#fdfbf6; font-size:20px; cursor:pointer; box-shadow:0 8px 18px rgba(74,50,38,0.35); display:flex; align-items:center; justify-content:center;" style-hover="background:#3a2620;" title="Settings">⚙</button>
+  </div>
+
+  <div style="position:relative; display:flex; align-items:flex-end; justify-content:center; gap:4px; width:100%; margin-left:18%;">
+  <div style="position:relative; width:min(500px, 56vw, 42vh); flex:none; z-index:3;">
+    <div style="width:100%; aspect-ratio:0.463; border-radius:16px; position:relative; overflow:hidden;">
+      <img src="{{ fridgeImageSrc }}" style="width:100%; height:100%; object-fit:contain; display:block;">
+    </div>
+
+    <div ref="{{ fridgeRef }}" style="position:absolute; inset:0; z-index:5;">
+      <sc-for list="{{ magnetsView }}" as="m" hint-placeholder-count="6">
+        <div style="{{ m.wrapStyle }}" onPointerDown="{{ m.onDown }}">
+
+          <sc-if value="{{ m.isChipStripes }}">
+            <div style="width:46px; padding:4px; background:#f8f1de; border-radius:5px; border:1px solid rgba(74,50,38,0.1); user-select:none;">
+              <div style="display:flex; height:32px; border-radius:3px; overflow:hidden;">
+                <sc-for list="{{ m.stripesView }}" as="s" hint-placeholder-count="3">
+                  <div style="{{ s.style }}"></div>
+                </sc-for>
+              </div>
+              <div style="font-size:7px; font-weight:700; letter-spacing:0.6px; text-align:center; color:#4a3226; margin-top:3px;">{{ m.data.label }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ m.isBadgeText }}">
+            <div style="{{ m.badgeStyle }}">
+              <sc-if value="{{ m.data.pin }}">
+                <div style="width:7px; height:7px; border-radius:50% 50% 50% 0; background:#4a3226; transform:rotate(-45deg); margin-bottom:4px;"></div>
+              </sc-if>
+              <div style="font-size:7px; font-weight:700; letter-spacing:0.4px; text-align:center; color:#4a3226; line-height:1.2; padding:0 5px;">{{ m.data.label }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ m.isPostcard }}">
+            <div style="width:72px; height:48px; background:#faf3e4; border:2px solid {{ m.data.border }}; border-radius:3px; position:relative; padding:6px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.4); user-select:none;">
+              <div style="position:absolute; top:4px; right:4px; width:12px; height:12px; background:{{ m.data.stamp }}; border:1px dashed rgba(255,255,255,0.7); border-radius:2px;"></div>
+              <div style="font-family:'Schoolbell',cursive; font-size:11px; color:#4a3226; max-width:50px; line-height:1.25;">{{ m.data.label }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ m.isShape }}">
+            <sc-if value="{{ m.isStar }}">
+              <div style="width:34px; height:34px; background:{{ m.data.color }}; clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);"></div>
+            </sc-if>
+            <sc-if value="{{ m.isHeart }}">
+              <div style="width:25px; height:22px; background:{{ m.data.color }}; transform:rotate(-45deg); position:relative; margin:6px;" style-before="content:''; position:absolute; width:25px; height:25px; background:inherit; border-radius:50%; left:0; top:-12.5px;" style-after="content:''; position:absolute; width:25px; height:25px; background:inherit; border-radius:50%; left:12.5px; top:0;"></div>
+            </sc-if>
+          </sc-if>
+
+          <sc-if value="{{ m.isTravel }}">
+            <div style="width:48px; height:48px; border-radius:50%; background:#f8f1de; border:2px solid {{ m.data.color }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; user-select:none;">
+              <sc-if value="{{ m.isPlane }}">
+                <div style="width:18px; height:5px; background:{{ m.data.color }}; border-radius:2px; transform:rotate(-30deg);"></div>
+              </sc-if>
+              <sc-if value="{{ m.isSuitcase }}">
+                <div style="position:relative; width:20px; height:14px;">
+                  <div style="position:absolute; top:-4px; left:6px; width:8px; height:4px; border:1.5px solid {{ m.data.color }}; border-bottom:none; border-radius:3px 3px 0 0;"></div>
+                  <div style="width:20px; height:14px; background:{{ m.data.color }}; border-radius:3px;"></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ m.isCamera }}">
+                <div style="position:relative; width:21px; height:14px; background:{{ m.data.color }}; border-radius:3px;">
+                  <div style="position:absolute; top:4px; left:7px; width:8px; height:8px; border-radius:50%; border:1.5px solid #f8f1de;"></div>
+                  <div style="position:absolute; top:-3px; left:2px; width:6px; height:3px; background:{{ m.data.color }}; border-radius:1px;"></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ m.isCompass }}">
+                <div style="position:relative; width:20px; height:20px; border-radius:50%; border:1.5px solid {{ m.data.color }};">
+                  <div style="position:absolute; top:1px; left:8.5px; width:1.5px; height:17px; background:{{ m.data.color }}; transform:rotate(45deg); transform-origin:center;"></div>
+                </div>
+              </sc-if>
+              <div style="font-size:7px; font-weight:700; letter-spacing:0.4px; color:#4a3226;">{{ m.data.label }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ m.isTape }}">
+            <div style="width:56px; height:18px; background:{{ m.data.color }}; opacity:0.65; background-image:repeating-linear-gradient(45deg, rgba(255,255,255,0.25) 0 4px, transparent 4px 8px);"></div>
+          </sc-if>
+
+          <sc-if value="{{ m.isPolaroid }}">
+            <div style="width:66px; height:78px; background:#fdfbf6; padding:4px 4px 16px 4px; box-shadow:0 4px 8px rgba(0,0,0,0.12); user-select:none;">
+              <div style="width:100%; height:100%; background:#e4e0d4; background-image:repeating-linear-gradient(-45deg, rgba(74,50,38,0.06) 0 6px, transparent 6px 12px); display:flex; align-items:center; justify-content:center;">
+                <span style="font-family:'Space Mono',monospace; font-size:7px; color:#a89f8d;">photo</span>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ m.isCustom }}" hint-placeholder-val="{{ false }}">
+            <img src="{{ m.imageSrc }}" style="width:60px; height:60px; object-fit:contain; user-select:none; pointer-events:none;">
+          </sc-if>
+
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative; width:min(640px, 62vw, 60vh); flex:none;">
+    
+  <img src="assets/shelf-crayon.png" style="width:100%; height:auto; object-fit:contain; display:block;"></div>
+
+  <img src="assets/kitchen-plant.png" style="position: absolute; left: 24px; width: 6%; z-index: 6; pointer-events: none; top: 499px">
+  <img src="assets/kitchen-plant2.png" style="position: absolute; left: -97px; width: 10%; z-index: 7; pointer-events: none; top: 469px">
+  <img src="assets/kitchen-shelf-wall.png" style="position:absolute; top:-2%; left:54%; width:38%; z-index:4; pointer-events:none;">
+  <img src="assets/kitchen-window.png" style="position: absolute; top: 35px; left: -34px; width: 16%; z-index: 1; pointer-events: none">
+  <img src="assets/kitchen-table-toaster.png" style="position: absolute; left: -178px; width: 29%; z-index: 4; pointer-events: none; top: 307px">
+  <img src="{{ catImageSrc }}" style="{{ catStyle }}">
+  <img src="assets/kitchen-stool-plant.png" style="position:absolute; bottom:0; right:2%; width:12%; z-index:5; pointer-events:none;">
+  </div>
+
+  <sc-if value="{{ galleryOpen }}">
+    <div onClick="{{ closeGallery }}" style="position:fixed; inset:0; background:rgba(74,50,38,0.35); z-index:50; animation:ff-pop 0.18s ease;">
+      <div onClick="{{ stopProp }}" style="position:absolute; top:0; right:0; bottom:0; width:min(92vw, 380px); background:#f8f4dd; box-shadow:-12px 0 30px rgba(0,0,0,0.15); padding:24px; overflow-y:auto; animation:ff-slide 0.22s ease;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <div style="font-size:22px; font-weight:400; font-family:'Schoolbell',cursive; color:#4a3226;">Add a magnet</div>
+          <button onClick="{{ closeGallery }}" style="border:none; background:transparent; font-size:20px; color:#8a7360; cursor:pointer; line-height:1;">×</button>
+        </div>
+        <div style="font-size:13px; color:#8a7360; margin-bottom:14px;">Pick something for the fridge, or upload your own.</div>
+        <input value="{{ search }}" onChange="{{ onSearchChange }}" placeholder="Search magnets" style="width:100%; padding:10px 14px; border:1px solid rgba(74,50,38,0.15); border-radius:100px; font-size:13px; font-family:'DM Sans',sans-serif; background:#fff; margin-bottom:18px;">
+
+        <div style="margin-bottom:22px;">
+          <div style="font-size:18px; font-weight:400; font-family:'Schoolbell',cursive; color:#4a3226; margin-bottom:10px;">Your own</div>
+          <label style="display:flex; align-items:center; justify-content:center; gap:8px; border:2px dashed #cbbf9f; border-radius:12px; padding:16px; cursor:pointer; font-size:13px; color:#8a7360;" style-hover="border-color:#f19c79; color:#4a3226;">
+            <input type="file" accept="image/png" onChange="{{ onCustomUpload }}" style="display:none;">
+            Upload a transparent PNG
+          </label>
+        </div>
+
+        <sc-for list="{{ catalogView }}" as="section" hint-placeholder-count="10">
+          <div style="margin-bottom:22px;">
+            <div style="font-size:18px; font-weight:400; font-family:'Schoolbell',cursive; color:#4a3226; margin-bottom:10px;">{{ section.title }}</div>
+            <div style="display:flex; flex-wrap:wrap; gap:10px;">
+              <sc-for list="{{ section.items }}" as="it" hint-placeholder-count="4">
+                <button onClick="{{ it.onAdd }}" style="border:1px solid rgba(74,50,38,0.1); background:#fff; border-radius:12px; padding:10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; width:96px;" style-hover="border-color:#f19c79; box-shadow:0 4px 10px rgba(0,0,0,0.08);">
+                  <div style="height:70px; display:flex; align-items:center; justify-content:center;">
+
+                    <sc-if value="{{ it.isChipStripes }}">
+                      <div style="width:48px; padding:4px; background:#f8f1de; border-radius:4px; border:1px solid rgba(74,50,38,0.1);">
+                        <div style="display:flex; height:30px; border-radius:2px; overflow:hidden;">
+                          <sc-for list="{{ it.stripesView }}" as="s" hint-placeholder-count="3">
+                            <div style="{{ s.style }}"></div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ it.isBadgeText }}">
+                      <div style="{{ it.badgeStyle }}">
+                        <sc-if value="{{ it.data.pin }}">
+                          <div style="width:7px; height:7px; border-radius:50% 50% 50% 0; background:#4a3226; transform:rotate(-45deg); margin-bottom:3px;"></div>
+                        </sc-if>
+                        <div style="font-size:7px; font-weight:700; text-align:center; color:#4a3226; line-height:1.15; padding:0 4px;">{{ it.data.label }}</div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ it.isPostcard }}">
+                      <div style="width:56px; height:40px; background:#faf3e4; border:2px solid {{ it.data.border }}; border-radius:2px; position:relative;">
+                        <div style="position:absolute; top:3px; right:3px; width:9px; height:9px; background:{{ it.data.stamp }};"></div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ it.isShape }}">
+                      <sc-if value="{{ it.isStar }}">
+                        <div style="width:34px; height:34px; background:{{ it.data.color }}; clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);"></div>
+                      </sc-if>
+                      <sc-if value="{{ it.isHeart }}">
+                        <div style="width:24px; height:21px; background:{{ it.data.color }}; transform:rotate(-45deg); position:relative; margin:6px;" style-before="content:''; position:absolute; width:24px; height:24px; background:inherit; border-radius:50%; left:0; top:-12px;" style-after="content:''; position:absolute; width:24px; height:24px; background:inherit; border-radius:50%; left:12px; top:0;"></div>
+                      </sc-if>
+                    </sc-if>
+
+                    <sc-if value="{{ it.isTravel }}">
+                      <div style="width:48px; height:48px; border-radius:50%; background:#f8f1de; border:2px solid {{ it.data.color }}; display:flex; align-items:center; justify-content:center;">
+                        <sc-if value="{{ it.isPlane }}"><div style="width:18px; height:5px; background:{{ it.data.color }}; border-radius:2px; transform:rotate(-30deg);"></div></sc-if>
+                        <sc-if value="{{ it.isSuitcase }}"><div style="width:20px; height:14px; background:{{ it.data.color }}; border-radius:2px;"></div></sc-if>
+                        <sc-if value="{{ it.isCamera }}"><div style="width:22px; height:14px; background:{{ it.data.color }}; border-radius:2px;"></div></sc-if>
+                        <sc-if value="{{ it.isCompass }}"><div style="width:20px; height:20px; border-radius:50%; border:2px solid {{ it.data.color }};"></div></sc-if>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ it.isTape }}">
+                      <div style="width:56px; height:18px; background:{{ it.data.color }}; opacity:0.65; background-image:repeating-linear-gradient(45deg, rgba(255,255,255,0.25) 0 4px, transparent 4px 8px);"></div>
+                    </sc-if>
+
+                    <sc-if value="{{ it.isPolaroid }}">
+                      <div style="width:44px; height:52px; background:#fdfbf6; padding:3px 3px 12px 3px; box-shadow:0 2px 5px rgba(0,0,0,0.12);">
+                        <div style="width:100%; height:100%; background:#e4e0d4;"></div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ it.isCustom }}" hint-placeholder-val="{{ false }}">
+                      <img src="{{ it.imageSrc }}" style="width:56px; height:56px; object-fit:contain;">
+                    </sc-if>
+
+                  </div>
+                  <div style="font-size:11px; color:#4a3226; text-align:center; line-height:1.2;">{{ it.label }}</div>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ onboardingOpen }}">
+    <div onClick="{{ closeOnboarding }}" style="position:fixed; inset:0; background:rgba(74,50,38,0.45); z-index:80; display:flex; align-items:center; justify-content:center; padding:20px; animation:ff-pop 0.18s ease;">
+      <div onClick="{{ stopProp }}" style="background:#fdfbf6; width:min(92vw, 460px); max-height:86vh; overflow-y:auto; border-radius:18px; padding:28px; box-shadow:0 30px 60px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+          <div style="font-size:26px; font-weight:400; font-family:'Schoolbell',cursive; color:#4a3226;">Welcome to your fridge</div>
+          <button onClick="{{ closeOnboarding }}" style="border:none; background:transparent; font-size:22px; color:#8a7360; cursor:pointer; line-height:1;">×</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:14px; font-size:14px; color:#4a3226; line-height:1.5;">
+          <div style="display:flex; gap:12px; align-items:baseline;">
+            <span style="font-family:'Schoolbell',cursive; font-size:18px; color:#f19c79; min-width:20px;">1.</span>
+            <div><strong>Add a magnet</strong> — tap the green + button and pick something from the gallery, or upload your own transparent PNG.</div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:baseline;">
+            <span style="font-family:'Schoolbell',cursive; font-size:18px; color:#f19c79; min-width:20px;">2.</span>
+            <div><strong>Move it</strong> — drag any magnet to reposition it on the fridge.</div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:baseline;">
+            <span style="font-family:'Schoolbell',cursive; font-size:18px; color:#f19c79; min-width:20px;">3.</span>
+            <div><strong>Add a memory</strong> — click a magnet to give it a title, description, photos, or videos.</div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:baseline;">
+            <span style="font-family:'Schoolbell',cursive; font-size:18px; color:#f19c79; min-width:20px;">4.</span>
+            <div><strong>Relive it</strong> — click a magnet that already has photos or videos to open the carousel viewer.</div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:baseline;">
+            <span style="font-family:'Schoolbell',cursive; font-size:18px; color:#f19c79; min-width:20px;">5.</span>
+            <div><strong>Settings</strong> — change the fridge color or toggle the ambient music.</div>
+          </div>
+        </div>
+        <button onClick="{{ closeOnboarding }}" style="margin-top:22px; width:100%; border:none; background:#f19c79; color:#fffaf0; font-weight:600; font-size:14px; padding:12px 20px; border-radius:100px; cursor:pointer; box-shadow:0 6px 14px rgba(241,156,121,0.4);">Got it</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewingMagnet }}">
+    <div onClick="{{ viewingMagnet.onClose }}" style="position:fixed; inset:0; background:rgba(20,14,10,0.75); z-index:60; display:flex; align-items:center; justify-content:center; padding:20px; animation:ff-pop 0.18s ease;">
+      <div onClick="{{ stopProp }}" style="width:min(92vw, 480px); max-height:88vh; display:flex; flex-direction:column; gap:14px;">
+        <div style="position:relative; width:100%; aspect-ratio:1; background:#0f0b09; border-radius:16px; overflow:hidden; box-shadow:0 30px 60px rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;">
+          <sc-if value="{{ viewingMagnet.isPhoto }}">
+            <img src="{{ viewingMagnet.current.url }}" style="width:100%; height:100%; object-fit:contain;">
+          </sc-if>
+          <sc-if value="{{ viewingMagnet.isVideo }}">
+            <video src="{{ viewingMagnet.current.url }}" controls="" preload="metadata" onError="{{ viewingMagnet.onVideoError }}" style="width:100%; height:100%; object-fit:contain; background:#000;"></video>
+            <sc-if value="{{ viewingMagnet.videoHasError }}">
+              <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fdfbf6; font-size:13px; padding:20px; text-align:center;">This video format can't be played in the browser.</div>
+            </sc-if>
+          </sc-if>
+          <sc-if value="{{ viewingMagnet.total }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ viewingMagnet.onPrev }}" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); width:36px; height:36px; border-radius:50%; border:none; background:rgba(0,0,0,0.4); color:#fff; font-size:18px; cursor:pointer;">‹</button>
+            <button onClick="{{ viewingMagnet.onNext }}" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:36px; height:36px; border-radius:50%; border:none; background:rgba(0,0,0,0.4); color:#fff; font-size:18px; cursor:pointer;">›</button>
+          </sc-if>
+          <button onClick="{{ viewingMagnet.onClose }}" style="position:absolute; top:8px; right:8px; width:30px; height:30px; border-radius:50%; border:none; background:rgba(0,0,0,0.45); color:#fff; font-size:16px; cursor:pointer;">×</button>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:6px;">
+          <sc-for list="{{ viewingMagnet.dots }}" as="dot" hint-placeholder-count="0">
+            <button onClick="{{ dot.onClick }}" style="width:7px; height:7px; border-radius:50%; border:none; background:{{ dot.active }} ? '#fdfbf6' : 'rgba(253,251,246,0.35)'; cursor:pointer; padding:0;"></button>
+          </sc-for>
+        </div>
+
+        <div style="background:#fdfbf6; border-radius:14px; padding:16px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div>
+            <div style="font-size:19px; font-weight:400; font-family:'Schoolbell',cursive; color:#4a3226;">{{ viewingMagnet.title }}</div>
+            <sc-if value="{{ viewingMagnet.description }}">
+              <div style="font-size:13px; color:#8a7360; margin-top:2px;">{{ viewingMagnet.description }}</div>
+            </sc-if>
+          </div>
+          <button onClick="{{ viewingMagnet.onEdit }}" style="border:1px solid rgba(74,50,38,0.15); background:#fff; color:#4a3226; font-weight:600; font-size:13px; padding:9px 16px; border-radius:100px; cursor:pointer; white-space:nowrap;">Edit</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ activeMagnet }}">
+    <div onClick="{{ closeMemory }}" style="position:fixed; inset:0; background:rgba(74,50,38,0.4); z-index:60; display:flex; align-items:center; justify-content:center; padding:20px; animation:ff-pop 0.18s ease;">
+      <div onClick="{{ stopProp }}" style="background:#fdfbf6; width:min(92vw, 520px); max-height:88vh; overflow-y:auto; border-radius:18px; padding:28px; box-shadow:0 30px 60px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <sc-if value="{{ activeMagnetImageSrc }}" hint-placeholder-val="{{ false }}">
+              <img src="{{ activeMagnetImageSrc }}" style="width:56px; height:56px; object-fit:contain; border-radius:10px; background:#f8f4dd; padding:6px;">
+            </sc-if>
+            <div>
+              <div style="font-size:12px; font-weight:700; letter-spacing:0.6px; color:#8a7360; text-transform:uppercase;">{{ magnetLabel }}</div>
+              <div style="font-size:26px; font-weight:400; font-family:'Schoolbell',cursive; color:#4a3226; margin-top:4px;">Memory</div>
+            </div>
+          </div>
+          <button onClick="{{ closeMemory }}" style="border:none; background:transparent; font-size:22px; color:#8a7360; cursor:pointer; line-height:1;">×</button>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div>
+            <label style="font-size:12px; font-weight:600; color:#8a7360;">Title</label>
+            <input value="{{ draft.title }}" onChange="{{ onTitleChange }}" placeholder="A weekend in Lisbon" style="width:100%; margin-top:6px; padding:12px 14px; border:1px solid rgba(74,50,38,0.15); border-radius:10px; font-size:15px; font-family:'DM Sans',sans-serif; background:#fff;">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600; color:#8a7360;">Description</label>
+            <textarea value="{{ draft.description }}" onChange="{{ onDescChange }}" placeholder="What made it worth remembering?" rows="4" style="width:100%; margin-top:6px; padding:12px 14px; border:1px solid rgba(74,50,38,0.15); border-radius:10px; font-size:14px; font-family:'DM Sans',sans-serif; resize:vertical; background:#fff;"></textarea>
+          </div>
+
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label style="font-size:12px; font-weight:600; color:#8a7360;">Photos</label>
+              <label style="font-size:12px; font-weight:600; color:#6f8faa; cursor:pointer;">+ Add photos
+                <input type="file" accept="image/*" multiple="" onChange="{{ onPhotosChange }}" style="display:none;">
+              </label>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;">
+              <sc-for list="{{ photosView }}" as="p" hint-placeholder-count="0">
+                <div style="position:relative; width:76px; height:76px;">
+                  <img src="{{ p.url }}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+                  <button onClick="{{ p.onRemove }}" style="position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; border:none; background:#4a3226; color:#fff; font-size:12px; cursor:pointer; line-height:1;">×</button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label style="font-size:12px; font-weight:600; color:#8a7360;">Videos</label>
+              <label style="font-size:12px; font-weight:600; color:#6f8faa; cursor:pointer;">+ Add videos
+                <input type="file" accept="video/*" multiple="" onChange="{{ onVideosChange }}" style="display:none;">
+              </label>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+              <sc-for list="{{ videosView }}" as="v" hint-placeholder-count="0">
+                <div style="position:relative;">
+                  <video src="{{ v.url }}" controls="" preload="metadata" onError="{{ v.onError }}" style="width:100%; border-radius:8px; max-height:180px; background:#000;"></video>
+                  <sc-if value="{{ v.hasError }}">
+                    <div style="padding:10px; background:#faf0ea; border-radius:8px; color:#a44a3f; font-size:12px; margin-top:4px;">This video format can't be played in the browser.</div>
+                  </sc-if>
+                  <button onClick="{{ v.onRemove }}" style="position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%; border:none; background:#4a3226; color:#fff; font-size:12px; cursor:pointer; line-height:1;">×</button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; padding-top:16px; border-top:1px solid rgba(74,50,38,0.1);">
+          <button onClick="{{ deleteMagnet }}" style="border:none; background:transparent; color:#c1603f; font-size:17px; font-family:'Schoolbell',cursive; font-weight:400; cursor:pointer;">Remove magnet</button>
+          <div style="display:flex; gap:10px;">
+            <button onClick="{{ closeMemory }}" style="border:1px solid rgba(74,50,38,0.15); background:#fff; color:#4a3226; font-family:'Schoolbell',cursive; font-weight:400; font-size:18px; padding:10px 18px; border-radius:100px; cursor:pointer;">Cancel</button>
+            <button onClick="{{ saveMemory }}" style="border:none; background:#f19c79; color:#fffaf0; font-family:'Schoolbell',cursive; font-weight:400; font-size:18px; padding:10px 20px; border-radius:100px; cursor:pointer; box-shadow:0 6px 14px rgba(241,156,121,0.4);">Save memory</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static BLANK_PX = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7';
+  static FRIDGE_COLORS = [
+    { name: 'Green', swatch: '#a9c17c', img: 'assets/fridge-crayon3.png' },
+    { name: 'Blue', swatch: '#a9c9e6', img: 'assets/fridge-color-blue2.png' },
+    { name: 'Pink', swatch: '#f3b8c9', img: 'assets/fridge-color-rosa.png' },
+    { name: 'Yellow', swatch: '#f3e08a', img: 'assets/fridge-color-yellow2.png' },
+  ];
+  static CAT_OPTIONS = [
+    { name: 'Tuxedo', img: 'assets/kitchen-cat.png' },
+    { name: 'Sleeping', img: 'assets/cat-sleeping.png' },
+    { name: 'Stretching', img: 'assets/cat-stretch.png' },
+    { name: 'Standing', img: 'assets/cat-standing.png' },
+  ];
+  static CATALOG = [
+    { title: 'France', items: [
+      { label: 'Eiffel Tower', kind: 'custom', data: { imageUrl: 'assets/fr2-eiffel.png' } },
+      { label: 'Croissant', kind: 'custom', data: { imageUrl: 'assets/fr2-croissant.png' } },
+      { label: 'Wine', kind: 'custom', data: { imageUrl: 'assets/fr2-wine.png' } },
+      { label: 'Bicycle', kind: 'custom', data: { imageUrl: 'assets/fr2-bike.png' } },
+    ]},
+    { title: 'Greece', items: [
+      { label: 'Chapel', kind: 'custom', data: { imageUrl: 'assets/greece-church.png' } },
+      { label: 'Greek Salad', kind: 'custom', data: { imageUrl: 'assets/greece-salad.png' } },
+      { label: 'Column', kind: 'custom', data: { imageUrl: 'assets/greece-column.png' } },
+      { label: 'Sailboat', kind: 'custom', data: { imageUrl: 'assets/greece-boat.png' } },
+    ]},
+    { title: 'Mexico', items: [
+      { label: 'Cactus', kind: 'custom', data: { imageUrl: 'assets/mexico-cactus.png' } },
+      { label: 'Sugar Skull', kind: 'custom', data: { imageUrl: 'assets/mexico-skull.png' } },
+      { label: 'Sombrero', kind: 'custom', data: { imageUrl: 'assets/mexico-sombrero.png' } },
+      { label: 'Pyramid', kind: 'custom', data: { imageUrl: 'assets/mexico-pyramid.png' } },
+    ]},
+    { title: 'Brazil', items: [
+      { label: 'Christ the Redeemer', kind: 'custom', data: { imageUrl: 'assets/brazil-christ.png' } },
+      { label: 'Coconut', kind: 'custom', data: { imageUrl: 'assets/brazil-coconut.png' } },
+      { label: 'Carnival Mask', kind: 'custom', data: { imageUrl: 'assets/brazil-mask.png' } },
+      { label: 'Beach', kind: 'custom', data: { imageUrl: 'assets/brazil-beach.png' } },
+    ]},
+    { title: 'Japan', items: [
+      { label: 'Folding Fan', kind: 'custom', data: { imageUrl: 'assets/japan-fan.png' } },
+      { label: 'Ramen', kind: 'custom', data: { imageUrl: 'assets/japan-ramen.png' } },
+      { label: 'Torii Gate', kind: 'custom', data: { imageUrl: 'assets/japan-torii.png' } },
+      { label: 'Maneki-neko', kind: 'custom', data: { imageUrl: 'assets/japan-maneki.png' } },
+    ]},
+    { title: 'Sweden', items: [
+      { label: 'Gamla Stan Houses', kind: 'custom', data: { imageUrl: 'assets/sweden-houses.png' } },
+      { label: 'Ferry', kind: 'custom', data: { imageUrl: 'assets/sweden-ferry.png' } },
+      { label: 'Bicycle', kind: 'custom', data: { imageUrl: 'assets/sweden-bike.png' } },
+      { label: 'Fika Coffee', kind: 'custom', data: { imageUrl: 'assets/sweden-coffee.png' } },
+    ]},
+    { title: 'Spain', items: [
+      { label: 'Terracotta Pitcher', kind: 'custom', data: { imageUrl: 'assets/spain-pitcher.png' } },
+      { label: 'Paella', kind: 'custom', data: { imageUrl: 'assets/spain-paella.png' } },
+      { label: 'Azulejo Tile', kind: 'custom', data: { imageUrl: 'assets/spain-tile.png' } },
+      { label: 'Spanish Guitar', kind: 'custom', data: { imageUrl: 'assets/spain-guitar.png' } },
+    ]},
+    { title: 'Italy', items: [
+      { label: 'Olive Branch', kind: 'custom', data: { imageUrl: 'assets/italy-olives.png' } },
+      { label: 'Spaghetti', kind: 'custom', data: { imageUrl: 'assets/italy-spaghetti.png' } },
+      { label: 'Moka Pot', kind: 'custom', data: { imageUrl: 'assets/italy-mokapot.png' } },
+      { label: 'Colosseum', kind: 'custom', data: { imageUrl: 'assets/italy-colosseum.png' } },
+    ]},
+  ];
+
+  constructor(props) {
+    super(props);
+    this.fridgeRef = React.createRef();
+    this.zCounter = 20;
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('memory-fridge-magnets-v1') || 'null'); } catch (e) {}
+    if (saved && saved.length) saved = saved.filter(m => !(m.data && /starfish|france/.test(m.data.imageUrl || '')) && m.kind !== 'shape');
+
+    let fridgeColorIdx = 0;
+    try { fridgeColorIdx = parseInt(localStorage.getItem('memory-fridge-color-idx') || '0', 10) || 0; } catch (e) {}
+    let audioOn = true;
+    try { const raw = localStorage.getItem('memory-fridge-audio-on'); audioOn = raw === null ? true : raw === '1'; } catch (e) {}
+    let catIdx = 0;
+    try { catIdx = parseInt(localStorage.getItem('memory-fridge-cat-idx') || '0', 10) || 0; } catch (e) {}
+    this.state = {
+      magnets: (saved && saved.length) ? saved : this.seedMagnets(),
+      galleryOpen: false,
+      activeId: null,
+      draft: null,
+      draggingId: null,
+      videoErrors: {},
+      search: '',
+      fridgeColorIdx,
+      settingsOpen: false,
+      viewingId: null,
+      carouselIndex: 0,
+      audioOn,
+      onboardingOpen: false,
+      catIdx,
+    };
+    this._dragMeta = null;
+    this._audioEl = null;
+  }
+
+  ensureAudioEl() {
+    if (this._audioEl) return;
+    const el = new Audio('assets/ambient-music.mp3');
+    el.loop = true;
+    el.volume = 0;
+    this._audioEl = el;
+  }
+
+  playAudio() {
+    this.ensureAudioEl();
+    const el = this._audioEl;
+    el.play().catch(() => {});
+    let v = el.volume;
+    clearInterval(this._audioFade);
+    this._audioFade = setInterval(() => {
+      v = Math.min(0.55, v + 0.04);
+      el.volume = v;
+      if (v >= 0.55) clearInterval(this._audioFade);
+    }, 80);
+  }
+
+  stopAudio() {
+    if (!this._audioEl) return;
+    const el = this._audioEl;
+    let v = el.volume;
+    clearInterval(this._audioFade);
+    this._audioFade = setInterval(() => {
+      v = Math.max(0, v - 0.05);
+      el.volume = v;
+      if (v <= 0) { clearInterval(this._audioFade); el.pause(); }
+    }, 60);
+  }
+
+  toggleAudio() {
+    this.setState(s => {
+      const next = !s.audioOn;
+      try { localStorage.setItem('memory-fridge-audio-on', next ? '1' : '0'); } catch (e) {}
+      if (next) this.playAudio(); else this.stopAudio();
+      return { audioOn: next };
+    });
+  }
+
+  seedMagnets() {
+    return [
+      { id: 'seed1', kind: 'custom', data: { imageUrl: 'assets/japan-fan.png' }, x: 22, y: 16, rotation: -6, z: 1, memory: null },
+      { id: 'seed2', kind: 'custom', data: { imageUrl: 'assets/japan-ramen.png' }, x: 66, y: 12, rotation: 8, z: 2, memory: null },
+      { id: 'seed3', kind: 'custom', data: { imageUrl: 'assets/japan-torii.png' }, x: 42, y: 33, rotation: 4, z: 3, memory: null },
+      { id: 'seed4', kind: 'custom', data: { imageUrl: 'assets/japan-maneki.png' }, x: 78, y: 42, rotation: -10, z: 4, memory: null },
+    ];
+  }
+
+  persist(magnets) {
+    try { localStorage.setItem('memory-fridge-magnets-v1', JSON.stringify(magnets)); } catch (e) {}
+  }
+
+  updateMagnets(next) {
+    this.setState({ magnets: next });
+    this.persist(next);
+  }
+
+  componentDidMount() {
+    this._onMove = (e) => this.handlePointerMove(e);
+    this._onUp = (e) => this.handlePointerUp(e);
+    window.addEventListener('pointermove', this._onMove);
+    window.addEventListener('pointerup', this._onUp);
+    this._onFirstGesture = () => {
+      if (this.state.audioOn) this.playAudio();
+      window.removeEventListener('pointerdown', this._onFirstGesture);
+    };
+    window.addEventListener('pointerdown', this._onFirstGesture);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('pointermove', this._onMove);
+    window.removeEventListener('pointerup', this._onUp);
+    window.removeEventListener('pointerdown', this._onFirstGesture);
+  }
+
+  handlePointerMove(e) {
+    if (!this._dragMeta || !this.fridgeRef.current) return;
+    const rect = this.fridgeRef.current.getBoundingClientRect();
+    const { id, offsetXPct, offsetYPct } = this._dragMeta;
+    let xPct = ((e.clientX - rect.left) / rect.width) * 100 - offsetXPct;
+    let yPct = ((e.clientY - rect.top) / rect.height) * 100 - offsetYPct;
+    xPct = Math.max(3, Math.min(97, xPct));
+    yPct = Math.max(3, Math.min(97, yPct));
+    if (Math.abs(e.movementX) + Math.abs(e.movementY) > 0) this._dragMeta.moved = true;
+    const magnets = this.state.magnets.map(m => m.id === id ? { ...m, x: xPct, y: yPct } : m);
+    this.setState({ magnets });
+  }
+
+  handlePointerUp() {
+    if (!this._dragMeta) return;
+    const { id, moved } = this._dragMeta;
+    this._dragMeta = null;
+    this.persist(this.state.magnets);
+    this.setState({ draggingId: null });
+    if (!moved) this.handleMagnetClick(id);
+  }
+
+  handleMagnetClick(id) {
+    const m = this.state.magnets.find(mm => mm.id === id);
+    const mediaCount = m && m.memory ? (m.memory.photos || []).length + (m.memory.videos || []).length : 0;
+    if (mediaCount > 0) {
+      this.setState({ viewingId: id, carouselIndex: 0 });
+    } else {
+      this.openMemory(id);
+    }
+  }
+
+  closeView() { this.setState({ viewingId: null, carouselIndex: 0 }); }
+
+  carouselStep(delta) {
+    this.setState(s => {
+      const m = this.state.magnets.find(mm => mm.id === s.viewingId);
+      const total = m && m.memory ? (m.memory.photos || []).length + (m.memory.videos || []).length : 0;
+      if (!total) return null;
+      const next = (s.carouselIndex + delta + total) % total;
+      return { carouselIndex: next, viewingVideoError: false };
+    });
+  }
+
+  startDrag(id, e) {
+    e.stopPropagation();
+    if (!this.fridgeRef.current) return;
+    const rect = this.fridgeRef.current.getBoundingClientRect();
+    const m = this.state.magnets.find(mm => mm.id === id);
+    if (!m) return;
+    const px = ((e.clientX - rect.left) / rect.width) * 100;
+    const py = ((e.clientY - rect.top) / rect.height) * 100;
+    this.zCounter += 1;
+    const magnets = this.state.magnets.map(mm => mm.id === id ? { ...mm, z: this.zCounter } : mm);
+    this._dragMeta = { id, offsetXPct: px - m.x, offsetYPct: py - m.y, moved: false };
+    this.setState({ draggingId: id, magnets });
+  }
+
+  openMemory(id) {
+    const m = this.state.magnets.find(mm => mm.id === id);
+    if (!m) return;
+    this.setState({
+      activeId: id,
+      draft: {
+        title: (m.memory && m.memory.title) || '',
+        description: (m.memory && m.memory.description) || '',
+        photos: (m.memory && m.memory.photos) ? [...m.memory.photos] : [],
+        videos: (m.memory && m.memory.videos) ? [...m.memory.videos] : [],
+      },
+    });
+  }
+
+  closeMemory() { this.setState({ activeId: null, draft: null }); }
+
+  updateDraft(field, value) {
+    this.setState(s => ({ draft: { ...s.draft, [field]: value } }));
+  }
+
+  addFiles(field, fileList) {
+    const files = Array.from(fileList || []);
+    files.forEach(file => {
+      if (field === 'videos') {
+        const url = URL.createObjectURL(file);
+        this.setState(s => ({ draft: { ...s.draft, videos: [...s.draft.videos, url] } }));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.setState(s => ({ draft: { ...s.draft, [field]: [...s.draft[field], reader.result] } }));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  removeDraftItem(field, idx) {
+    this.setState(s => ({ draft: { ...s.draft, [field]: s.draft[field].filter((_, i) => i !== idx) } }));
+  }
+
+  saveMemory() {
+    const { activeId, draft } = this.state;
+    const magnets = this.state.magnets.map(m => m.id === activeId ? { ...m, memory: { ...draft } } : m);
+    this.updateMagnets(magnets);
+    this.setState({ activeId: null, draft: null });
+  }
+
+  deleteMagnet() {
+    const { activeId } = this.state;
+    const magnets = this.state.magnets.filter(m => m.id !== activeId);
+    this.updateMagnets(magnets);
+    this.setState({ activeId: null, draft: null });
+  }
+
+  addFromCatalog(item) {
+    this.zCounter += 1;
+    const id = 'm' + Date.now() + Math.floor(Math.random() * 1000);
+    let x, y;
+    do {
+      x = 15 + Math.random() * 70;
+      y = 10 + Math.random() * 78;
+    } while (x > 72 && y > 70);
+    const rotation = -12 + Math.random() * 24;
+    const magnet = { id, kind: item.kind, data: item.data, x, y, rotation, z: this.zCounter, memory: null };
+    this.updateMagnets([...this.state.magnets, magnet]);
+    this.setState({ galleryOpen: false });
+    this.openMemory(id);
+  }
+
+  addCustomImage(fileList) {
+    const file = fileList && fileList[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.addFromCatalog({ kind: 'custom', data: { imageUrl: reader.result } });
+    };
+    reader.readAsDataURL(file);
+    this.setState({ galleryOpen: false });
+  }
+
+  setFridgeColor(idx) {
+    this.setState({ fridgeColorIdx: idx });
+    try { localStorage.setItem('memory-fridge-color-idx', String(idx)); } catch (e) {}
+  }
+
+  setCatIdx(idx) {
+    this.setState({ catIdx: idx });
+    try { localStorage.setItem('memory-fridge-cat-idx', String(idx)); } catch (e) {}
+  }
+
+  buildFlags(entry) {
+    const kind = entry.kind;
+    const d = entry.data || {};
+    return {
+      isChipStripes: kind === 'chip-stripes',
+      isBadgeText: kind === 'badge-text',
+      isPostcard: kind === 'postcard',
+      isShape: kind === 'shape',
+      isTravel: kind === 'travel-icon',
+      isTape: kind === 'tape',
+      isPolaroid: kind === 'polaroid',
+      isCustom: kind === 'custom',
+      isStar: d.shape === 'star',
+      isHeart: d.shape === 'heart',
+      isPlane: d.glyph === 'plane',
+      isSuitcase: d.glyph === 'suitcase',
+      isCamera: d.glyph === 'camera',
+      isCompass: d.glyph === 'compass',
+      stripesView: (kind === 'chip-stripes' && d.stripes) ? d.stripes.map(c => ({ style: { background: c, flex: 1 } })) : [],
+      badgeStyle: (kind === 'badge-text') ? {
+        width: '52px', height: '52px', borderRadius: '50%', background: d.bg,
+        border: '3px solid ' + d.ring, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', userSelect: 'none',
+      } : null,
+    };
+  }
+
+  renderVals() {
+    const dragging = this.state.draggingId;
+    const magnetsView = this.state.magnets.map(m => {
+      const flags = this.buildFlags(m);
+      const hasMemory = !!(m.memory && (m.memory.title || m.memory.description || (m.memory.photos && m.memory.photos.length) || (m.memory.videos && m.memory.videos.length)));
+      return {
+        ...m, ...flags, hasMemory,
+        imageSrc: (m.data && m.data.imageUrl) ? m.data.imageUrl : 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7',
+        wrapStyle: {
+          position: 'absolute', left: m.x + '%', top: m.y + '%',
+          transform: `translate(-50%, -50%) rotate(${m.rotation}deg) scale(${dragging === m.id ? 1.07 : 1})`,
+          zIndex: m.z, cursor: dragging === m.id ? 'grabbing' : 'grab',
+          transition: dragging === m.id ? 'none' : 'transform 0.2s ease',
+          touchAction: 'none',
+          filter: dragging === m.id ? 'drop-shadow(0 16px 20px rgba(0,0,0,0.28))' : 'drop-shadow(0 6px 10px rgba(0,0,0,0.18))',
+        },
+        onDown: (e) => this.startDrag(m.id, e),
+      };
+    });
+
+    const q = (this.state.search || '').trim().toLowerCase();
+    const catalogView = Component.CATALOG.map(section => ({
+      title: section.title,
+      items: section.items.map(it => ({ ...it, ...this.buildFlags(it), imageSrc: (it.data && it.data.imageUrl) ? it.data.imageUrl : 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7', onAdd: () => this.addFromCatalog(it) })),
+    })).map(section => ({
+      ...section,
+      items: q ? section.items.filter(it => it.label.toLowerCase().includes(q) || section.title.toLowerCase().includes(q)) : section.items,
+    })).filter(section => section.items.length > 0);
+
+    const fridgeColors = Component.FRIDGE_COLORS.map((c, i) => ({
+      ...c, isActive: i === this.state.fridgeColorIdx,
+      swatchStyle: { width: '22px', height: '22px', borderRadius: '50%', background: c.swatch, border: i === this.state.fridgeColorIdx ? '2px solid #4a3226' : '2px solid rgba(74,50,38,0.15)', cursor: 'pointer' },
+      onSelect: () => this.setFridgeColor(i),
+    }));
+    const activeFridgeColor = Component.FRIDGE_COLORS[this.state.fridgeColorIdx] || Component.FRIDGE_COLORS[0];
+    const fridgeImageSrc = activeFridgeColor.img;
+
+    const catOptions = Component.CAT_OPTIONS.map((c, i) => ({
+      ...c, isActive: i === this.state.catIdx,
+      thumbStyle: { width: '42px', height: '42px', borderRadius: '8px', border: i === this.state.catIdx ? '2px solid #4a3226' : '2px solid rgba(74,50,38,0.15)', cursor: 'pointer', padding: '2px', background: '#fff' },
+      onSelect: () => this.setCatIdx(i),
+    }));
+    const catImageSrc = (Component.CAT_OPTIONS[this.state.catIdx] || Component.CAT_OPTIONS[0]).img;
+    const catStyle = { position: 'absolute', bottom: 0, left: '14%', width: this.state.catIdx === 0 ? '9%' : '13%', zIndex: 5, pointerEvents: 'none' };
+
+    const activeMagnet = this.state.activeId ? this.state.magnets.find(m => m.id === this.state.activeId) : null;
+    const draft = this.state.draft || { title: '', description: '', photos: [], videos: [] };
+
+    const viewingMagnetRaw = this.state.viewingId ? this.state.magnets.find(m => m.id === this.state.viewingId) : null;
+    let viewingMagnet = null;
+    if (viewingMagnetRaw && viewingMagnetRaw.memory) {
+      const mem = viewingMagnetRaw.memory;
+      const items = [
+        ...(mem.photos || []).map(url => ({ type: 'photo', url })),
+        ...(mem.videos || []).map(url => ({ type: 'video', url })),
+      ];
+      const total = items.length;
+      const idx = total ? ((this.state.carouselIndex % total) + total) % total : 0;
+      const current = items[idx] || null;
+      viewingMagnet = {
+        title: mem.title || (viewingMagnetRaw.data && viewingMagnetRaw.data.label) || 'Memory',
+        description: mem.description || '',
+        total,
+        idx,
+        current,
+        isPhoto: !!current && current.type === 'photo',
+        isVideo: !!current && current.type === 'video',
+        videoHasError: this.state.viewingVideoError,
+        onVideoError: () => this.setState({ viewingVideoError: true }),
+        dots: items.map((it, i) => ({ active: i === idx, onClick: () => this.setState({ carouselIndex: i, viewingVideoError: false }) })),
+        onPrev: () => this.carouselStep(-1),
+        onNext: () => this.carouselStep(1),
+        onClose: () => this.closeView(),
+        onEdit: () => { this.closeView(); this.openMemory(viewingMagnetRaw.id); },
+      };
+    }
+
+    return {
+      magnetsView,
+      galleryOpen: this.state.galleryOpen,
+      openGallery: () => this.setState({ galleryOpen: true }),
+      closeGallery: () => this.setState({ galleryOpen: false }),
+      catalogView,
+      search: this.state.search,
+      onSearchChange: (e) => this.setState({ search: e.target.value }),
+      fridgeColors,
+      cabinetDrawers: [0, 1, 2],
+      settingsOpen: this.state.settingsOpen,
+      toggleSettings: () => this.setState(s => ({ settingsOpen: !s.settingsOpen })),
+      audioOn: this.state.audioOn,
+      toggleAudio: () => this.toggleAudio(),
+      audioToggleStyle: { width: '40px', height: '22px', borderRadius: '100px', border: 'none', background: this.state.audioOn ? '#6b8f4e' : 'rgba(74,50,38,0.2)', position: 'relative', cursor: 'pointer', padding: 0 },
+      audioKnobStyle: { position: 'absolute', top: '2px', left: this.state.audioOn ? '20px' : '2px', width: '18px', height: '18px', borderRadius: '50%', background: '#fdfbf6', transition: 'left 0.15s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' },
+      onboardingOpen: this.state.onboardingOpen,
+      openOnboarding: () => this.setState({ onboardingOpen: true }),
+      closeOnboarding: () => this.setState({ onboardingOpen: false }),
+      fridgeImageSrc,
+      catOptions,
+      catImageSrc,
+      catStyle,
+      fridgeRef: this.fridgeRef,
+      activeMagnet,
+      viewingMagnet,
+      magnetLabel: activeMagnet ? ((activeMagnet.data && activeMagnet.data.label) || 'This magnet') : '',
+      activeMagnetImageSrc: (activeMagnet && activeMagnet.data && activeMagnet.data.imageUrl) || null,
+      draft,
+      stopProp: (e) => e.stopPropagation(),
+      closeMemory: () => this.closeMemory(),
+      saveMemory: () => this.saveMemory(),
+      deleteMagnet: () => this.deleteMagnet(),
+      onTitleChange: (e) => this.updateDraft('title', e.target.value),
+      onDescChange: (e) => this.updateDraft('description', e.target.value),
+      onPhotosChange: (e) => { this.addFiles('photos', e.target.files); e.target.value = ''; },
+      onVideosChange: (e) => { this.addFiles('videos', e.target.files); e.target.value = ''; },
+      onCustomUpload: (e) => { this.addCustomImage(e.target.files); e.target.value = ''; },
+      photosView: draft.photos.map((url, i) => ({ url: url || Component.BLANK_PX, onRemove: () => this.removeDraftItem('photos', i) })),
+      videosView: draft.videos.map((url, i) => ({ url, hasError: !!this.state.videoErrors[i], onRemove: () => this.removeDraftItem('videos', i), onError: () => this.setState(s => ({ videoErrors: { ...s.videoErrors, [i]: true } })) })),
+    };
+  }
+}
+
+</script>
+</body>
+</html>
