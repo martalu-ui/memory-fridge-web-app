@@ -464,6 +464,9 @@ class Component extends DCLogic {
       return file;
     }
   }
+  // The drawn fridge body inside the fridge images, as % of the image box.
+  // Above it sits the plant pot, and leaves hang past its right edge.
+  static FRIDGE_BODY = { left: 2.5, right: 86, top: 20.5, bottom: 96 };
   static FRIDGE_COLORS = [
     { name: 'Green', swatch: '#a9c17c', img: 'assets/fridge-crayon3.png' },
     { name: 'Blue', swatch: '#a9c9e6', img: 'assets/fridge-color-blue2.png' },
@@ -611,11 +614,44 @@ class Component extends DCLogic {
 
   seedMagnets() {
     return [
-      { id: 'seed1', kind: 'custom', data: { imageUrl: 'assets/japan-fan.png' }, x: 22, y: 16, rotation: -6, z: 1, memory: null },
-      { id: 'seed2', kind: 'custom', data: { imageUrl: 'assets/japan-ramen.png' }, x: 66, y: 12, rotation: 8, z: 2, memory: null },
+      { id: 'seed1', kind: 'custom', data: { imageUrl: 'assets/japan-fan.png' }, x: 24, y: 30, rotation: -6, z: 1, memory: null },
+      { id: 'seed2', kind: 'custom', data: { imageUrl: 'assets/japan-ramen.png' }, x: 62, y: 29, rotation: 8, z: 2, memory: null },
       { id: 'seed3', kind: 'custom', data: { imageUrl: 'assets/japan-torii.png' }, x: 42, y: 33, rotation: 4, z: 3, memory: null },
-      { id: 'seed4', kind: 'custom', data: { imageUrl: 'assets/japan-maneki.png' }, x: 78, y: 42, rotation: -10, z: 4, memory: null },
+      { id: 'seed4', kind: 'custom', data: { imageUrl: 'assets/japan-maneki.png' }, x: 66, y: 47, rotation: -10, z: 4, memory: null },
     ];
+  }
+
+  // Half a magnet's size, as % of the fridge box (fallback before layout).
+  magnetHalfPct(halfPxW = 36, halfPxH = 38) {
+    const el = this.fridgeRef.current;
+    const rect = el && el.getBoundingClientRect();
+    if (!rect || !rect.width) return { w: 11, h: 5 };
+    return { w: halfPxW / rect.width * 100, h: halfPxH / rect.height * 100 };
+  }
+
+  // Keeps a magnet's centre far enough inside the fridge body that the whole
+  // magnet stays on the door.
+  clampToBody(x, y, half) {
+    const b = Component.FRIDGE_BODY;
+    const h = half || this.magnetHalfPct();
+    const minX = b.left + h.w, maxX = b.right - h.w;
+    const minY = b.top + h.h, maxY = b.bottom - h.h;
+    return {
+      x: minX > maxX ? (b.left + b.right) / 2 : Math.max(minX, Math.min(maxX, x)),
+      y: minY > maxY ? (b.top + b.bottom) / 2 : Math.max(minY, Math.min(maxY, y)),
+    };
+  }
+
+  // Moves any magnet that sits off the fridge (older saves, window resizes).
+  clampAllMagnets() {
+    let changed = false;
+    const magnets = this.state.magnets.map(m => {
+      const c = this.clampToBody(m.x, m.y);
+      if (Math.abs(c.x - m.x) < 0.01 && Math.abs(c.y - m.y) < 0.01) return m;
+      changed = true;
+      return { ...m, x: c.x, y: c.y };
+    });
+    if (changed) this.updateMagnets(magnets);
   }
 
   persist(magnets) {
@@ -681,6 +717,9 @@ class Component extends DCLogic {
 
   componentDidMount() {
     this.loadMedia();
+    setTimeout(() => this.clampAllMagnets(), 0);
+    this._onResize = () => { if (!this._dragMeta) this.clampAllMagnets(); };
+    window.addEventListener('resize', this._onResize);
     this._onMove = (e) => this.handlePointerMove(e);
     this._onUp = (e) => this.handlePointerUp(e);
     window.addEventListener('pointermove', this._onMove);
@@ -696,16 +735,18 @@ class Component extends DCLogic {
     window.removeEventListener('pointermove', this._onMove);
     window.removeEventListener('pointerup', this._onUp);
     window.removeEventListener('pointerdown', this._onFirstGesture);
+    window.removeEventListener('resize', this._onResize);
   }
 
   handlePointerMove(e) {
     if (!this._dragMeta || !this.fridgeRef.current) return;
     const rect = this.fridgeRef.current.getBoundingClientRect();
-    const { id, offsetXPct, offsetYPct } = this._dragMeta;
-    let xPct = ((e.clientX - rect.left) / rect.width) * 100 - offsetXPct;
-    let yPct = ((e.clientY - rect.top) / rect.height) * 100 - offsetYPct;
-    xPct = Math.max(3, Math.min(97, xPct));
-    yPct = Math.max(3, Math.min(97, yPct));
+    const { id, offsetXPct, offsetYPct, half } = this._dragMeta;
+    const raw = {
+      x: ((e.clientX - rect.left) / rect.width) * 100 - offsetXPct,
+      y: ((e.clientY - rect.top) / rect.height) * 100 - offsetYPct,
+    };
+    const { x: xPct, y: yPct } = this.clampToBody(raw.x, raw.y, half);
     if (Math.abs(e.movementX) + Math.abs(e.movementY) > 0) this._dragMeta.moved = true;
     const magnets = this.state.magnets.map(m => m.id === id ? { ...m, x: xPct, y: yPct } : m);
     this.setState({ magnets });
@@ -752,7 +793,9 @@ class Component extends DCLogic {
     const py = ((e.clientY - rect.top) / rect.height) * 100;
     this.zCounter += 1;
     const magnets = this.state.magnets.map(mm => mm.id === id ? { ...mm, z: this.zCounter } : mm);
-    this._dragMeta = { id, offsetXPct: px - m.x, offsetYPct: py - m.y, moved: false };
+    const box = e.currentTarget && e.currentTarget.getBoundingClientRect ? e.currentTarget.getBoundingClientRect() : null;
+    const half = box && box.width ? this.magnetHalfPct(box.width / 2, box.height / 2) : null;
+    this._dragMeta = { id, offsetXPct: px - m.x, offsetYPct: py - m.y, moved: false, half };
     this.setState({ draggingId: id, magnets });
   }
 
@@ -807,11 +850,12 @@ class Component extends DCLogic {
   addFromCatalog(item) {
     this.zCounter += 1;
     const id = 'm' + Date.now() + Math.floor(Math.random() * 1000);
-    let x, y;
-    do {
-      x = 15 + Math.random() * 70;
-      y = 10 + Math.random() * 78;
-    } while (x > 72 && y > 70);
+    const b = Component.FRIDGE_BODY;
+    const h = this.magnetHalfPct();
+    const { x, y } = this.clampToBody(
+      b.left + h.w + Math.random() * (b.right - b.left - 2 * h.w),
+      b.top + h.h + Math.random() * (b.bottom - b.top - 2 * h.h),
+      h);
     const rotation = -12 + Math.random() * 24;
     const magnet = { id, kind: item.kind, data: item.data, x, y, rotation, z: this.zCounter, memory: null };
     this.updateMagnets([...this.state.magnets, magnet]);
